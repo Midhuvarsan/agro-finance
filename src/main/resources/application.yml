@@ -5,6 +5,11 @@ spring:
   application:
     name: agrofinance-backend
 
+  servlet:
+    multipart:
+      max-file-size: 5MB
+      max-request-size: 6MB
+
   datasource:
     url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/${DB_NAME:agrofinance_db}?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
     username: ${DB_USERNAME:root}
@@ -30,7 +35,11 @@ logging:
     root: INFO
     com.agrofinance: DEBUG
     org.hibernate.SQL: DEBUG
-    org.springframework.security: DEBUG
+
 jwt:
   secret: ${JWT_SECRET:ICCr2TVfC00lLMm/8rczlpo/JfQPcWybnar4s/tiODsb29SsNHbgNfYYhcFfZoFZ}
   expiration: ${JWT_EXPIRATION:86400000} # 24 hours, in milliseconds
+
+storage:
+  upload-dir: ${UPLOAD_DIR:uploads}
+  max-file-size: 5242880 # 5 MB in bytes, service-level check
