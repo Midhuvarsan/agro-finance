@@ -11,5 +11,7 @@ public enum LoanStatus {
     AI_REVIEWED,
     BANK_APPROVED,
     REJECTED,
-    DISBURSED
+    DISBURSED,
+    /** Withdrawn by the farmer before approval — a visible history state, NOT a soft delete. */
+    CANCELLED
 }
