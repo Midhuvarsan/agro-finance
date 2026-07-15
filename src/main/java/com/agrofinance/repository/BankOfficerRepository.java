@@ -8,5 +8,37 @@ import org.springframework.data.jpa.repository.JpaRepository;
  * the user id, so findById(Long) covers the officer-by-user lookup.
  */
 public interface BankOfficerRepository extends JpaRepository<BankOfficer, Long> {
+ 
+    /** JOIN FETCH user because OfficerAdminResponse needs the email. */
+    @org.springframework.data.jpa.repository.Query(
+            "SELECT o FROM BankOfficer o JOIN FETCH o.user ORDER BY o.branchName")
+    java.util.List<BankOfficer> findAllWithUser();
+ 
 }
  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

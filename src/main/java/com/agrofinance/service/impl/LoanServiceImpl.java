@@ -221,6 +221,32 @@ public class LoanServiceImpl implements LoanService {
     }
  
     // ------------------------------------------------------------------
+    // Admin reporting
+    // ------------------------------------------------------------------
+ 
+    @Override
+    @Transactional(readOnly = true)
+    public List<LoanResponse> report(LoanStatus status, java.time.LocalDate from, java.time.LocalDate to) {
+        // LocalDate params become full-day timestamp bounds:
+        // from = start of that day, to = end of that day (inclusive).
+        java.time.LocalDateTime fromTs = (from != null) ? from.atStartOfDay() : null;
+        java.time.LocalDateTime toTs = (to != null) ? to.atTime(java.time.LocalTime.MAX) : null;
+ 
+        return loanRepository.findForReport(status, fromTs, toTs).stream()
+                .map(this::toResponse)
+                .toList();
+    }
+ 
+    @Override
+    @Transactional
+    public void markAiReviewed(Long loanId) {
+        Loan loan = loanOrNotFound(loanId);
+        requireTransition(loan, LoanStatus.AI_REVIEWED);
+        loan.setStatus(LoanStatus.AI_REVIEWED);
+        // dirty checking persists
+    }
+ 
+    // ------------------------------------------------------------------
     // Internals
     // ------------------------------------------------------------------
  
@@ -279,6 +305,10 @@ public class LoanServiceImpl implements LoanService {
  
 }
  
+
+
+
+
 
 
 

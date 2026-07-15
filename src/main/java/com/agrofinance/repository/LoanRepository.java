@@ -61,4 +61,62 @@ public interface LoanRepository extends JpaRepository<Loan, Long> {
     /** Guard for "one active application per farmer at a time". */
     boolean existsByFarmerUserIdAndStatusIn(Long farmerUserId, List<LoanStatus> statuses);
  
+    /**
+     * GROUP BY aggregate — one query for all status counts instead of
+     * one COUNT query per status. Returns raw Object[] rows
+     * (status, count) which the service reshapes into a Map.
+     */
+    @Query("SELECT l.status, COUNT(l) FROM Loan l GROUP BY l.status")
+    List<Object[]> countGroupedByStatus();
+ 
+    /** COALESCE: SUM over zero rows is NULL in SQL — this makes it 0 instead. */
+    @Query("SELECT COALESCE(SUM(l.amountApproved), 0) FROM Loan l WHERE l.status = :status")
+    java.math.BigDecimal sumApprovedAmountByStatus(@Param("status") LoanStatus status);
+ 
+    /**
+     * Report query: every filter is optional via the (:param IS NULL OR ...)
+     * pattern — one query serves all filter combinations instead of a
+     * combinatorial explosion of repository methods.
+     */
+    @Query("""
+            SELECT l FROM Loan l
+            JOIN FETCH l.farmer
+            JOIN FETCH l.loanScheme
+            LEFT JOIN FETCH l.reviewedBy
+            WHERE (:status IS NULL OR l.status = :status)
+              AND (:from IS NULL OR l.createdAt >= :from)
+              AND (:to IS NULL OR l.createdAt <= :to)
+            ORDER BY l.createdAt DESC
+            """)
+    List<Loan> findForReport(@Param("status") LoanStatus status,
+                             @Param("from") java.time.LocalDateTime from,
+                             @Param("to") java.time.LocalDateTime to);
+ 
 }
+ 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

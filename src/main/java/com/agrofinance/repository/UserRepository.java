@@ -1,6 +1,9 @@
 package com.agrofinance.repository;
  
 import com.agrofinance.entity.User;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -25,9 +28,45 @@ public interface UserRepository extends JpaRepository<User, Long> {
  
     boolean existsByEmail(String email);
  
+    /**
+     * @EntityGraph = "for THIS query, fetch roles eagerly" — an
+     * alternative to JOIN FETCH that composes with Pageable.
+     * Honest caveat: paginating while fetching a to-many collection
+     * makes Hibernate paginate IN MEMORY (it logs HHH90003004) because
+     * the joined rows can't be LIMITed correctly in SQL. Acceptable for
+     * an admin screen over thousands of users; at real scale you'd
+     * switch to a two-query pattern (page the ids, then fetch roles for
+     * just that page).
+     */
+    @Override
+    @EntityGraph(attributePaths = "roles")
+    Page<User> findAll(Pageable pageable);
+ 
 }
  
  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

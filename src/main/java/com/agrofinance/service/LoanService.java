@@ -30,8 +30,26 @@ public interface LoanService {
  
     LoanResponse disburse(Long officerUserId, Long loanId);
  
+    // ---- Admin reporting ----
+    List<LoanResponse> report(com.agrofinance.entity.LoanStatus status,
+                              java.time.LocalDate from,
+                              java.time.LocalDate to);
+ 
+    // ---- AI integration hook ----
+    /**
+     * Marks a loan AI-reviewed, enforcing the PENDING -> AI_REVIEWED
+     * transition. Exists so GeminiAIService can move the workflow
+     * WITHOUT owning any state-machine logic — transitions live in
+     * exactly one class (LoanServiceImpl), always.
+     */
+    void markAiReviewed(Long loanId);
+ 
 }
  
+
+
+
+
 
 
 

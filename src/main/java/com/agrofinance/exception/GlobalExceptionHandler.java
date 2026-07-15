@@ -79,6 +79,16 @@ public class GlobalExceptionHandler {
     }
  
     /**
+     * AI provider failures — 503, the "temporarily unavailable, retry
+     * later" status. Never a 500 (not our bug) and never blocks the
+     * core lending flow (AI is advisory by design).
+     */
+    @ExceptionHandler(AiServiceException.class)
+    public ResponseEntity<ErrorResponse> handleAiFailure(AiServiceException ex) {
+        return build(HttpStatus.SERVICE_UNAVAILABLE, ex.getMessage(), null);
+    }
+ 
+    /**
      * Last-resort catch-all. Deliberately returns a GENERIC message —
      * never ex.getMessage() — because internal exception text can leak
      * implementation details (SQL fragments, file paths, class names)
@@ -102,6 +112,16 @@ public class GlobalExceptionHandler {
  
 }
  
+
+
+
+
+
+
+
+
+
+
 
 
 
