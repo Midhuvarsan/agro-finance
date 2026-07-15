@@ -152,8 +152,11 @@ public class LoanServiceImpl implements LoanService {
  
     @Override
     @Transactional(readOnly = true)
-    public List<LoanResponse> reviewQueue() {
-        return loanRepository.findAllByStatus(LoanStatus.PENDING).stream()
+    public List<LoanResponse> reviewQueue(LoanStatus status) {
+        // Null-safe default: no filter supplied = the classic "what
+        // needs my attention" PENDING queue.
+        LoanStatus effective = (status != null) ? status : LoanStatus.PENDING;
+        return loanRepository.findAllByStatus(effective).stream()
                 .map(this::toResponse)
                 .toList();
     }
@@ -182,6 +185,7 @@ public class LoanServiceImpl implements LoanService {
  
         loan.setStatus(LoanStatus.BANK_APPROVED);
         loan.setAmountApproved(decision.amountApproved());
+        loan.setOfficerRemarks(decision.remarks());
         loan.setReviewedBy(officerRef(officerUserId));
         return toResponse(loan);
     }
@@ -189,10 +193,19 @@ public class LoanServiceImpl implements LoanService {
     @Override
     @Transactional
     public LoanResponse reject(Long officerUserId, Long loanId, LoanDecisionRequest decision) {
+ 
+        // A rejection with no stated reason is hostile to the farmer and
+        // useless for audit — remarks are REQUIRED here, unlike approve.
+        if (decision.remarks() == null || decision.remarks().isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Remarks are required when rejecting an application");
+        }
+ 
         Loan loan = loanOrNotFound(loanId);
         requireTransition(loan, LoanStatus.REJECTED);
  
         loan.setStatus(LoanStatus.REJECTED);
+        loan.setOfficerRemarks(decision.remarks());
         loan.setReviewedBy(officerRef(officerUserId));
         return toResponse(loan);
     }
@@ -257,6 +270,7 @@ public class LoanServiceImpl implements LoanService {
                 loan.getAmountApproved(),
                 loan.getStatus(),
                 loan.getPurpose(),
+                loan.getOfficerRemarks(),
                 loan.getReviewedBy() != null ? loan.getReviewedBy().getEmployeeId() : null,
                 loan.getCreatedAt(),
                 loan.getUpdatedAt()
@@ -265,6 +279,12 @@ public class LoanServiceImpl implements LoanService {
  
 }
  
+
+
+
+
+
+
 
 
 

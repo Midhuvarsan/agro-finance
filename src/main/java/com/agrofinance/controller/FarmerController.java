@@ -2,6 +2,7 @@ package com.agrofinance.controller;
  
 import com.agrofinance.dto.FarmerRequest;
 import com.agrofinance.dto.FarmerResponse;
+import com.agrofinance.dto.FarmerReviewResponse;
 import com.agrofinance.security.CustomUserDetails;
 import com.agrofinance.service.FarmerService;
 import jakarta.validation.Valid;
@@ -74,5 +75,38 @@ public class FarmerController {
         return farmerService.getProfile(userId);
     }
  
+    /** Full credit-review picture: profile + lands + crops + documents in one call. */
+    @PreAuthorize("hasAnyRole('BANK_OFFICER', 'ADMIN')")
+    @GetMapping("/{userId}/review")
+    public FarmerReviewResponse getFarmerReviewDetails(@PathVariable Long userId) {
+        return farmerService.getReviewDetails(userId);
+    }
+ 
 }
  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

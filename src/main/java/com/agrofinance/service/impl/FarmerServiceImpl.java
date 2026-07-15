@@ -2,11 +2,14 @@ package com.agrofinance.service.impl;
  
 import com.agrofinance.dto.FarmerRequest;
 import com.agrofinance.dto.FarmerResponse;
+import com.agrofinance.dto.FarmerReviewResponse;
 import com.agrofinance.entity.Farmer;
 import com.agrofinance.entity.User;
 import com.agrofinance.entity.UserStatus;
 import com.agrofinance.repository.FarmerRepository;
 import com.agrofinance.repository.UserRepository;
+import com.agrofinance.service.DocumentService;
+import com.agrofinance.service.FarmService;
 import com.agrofinance.service.FarmerService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -23,6 +26,8 @@ public class FarmerServiceImpl implements FarmerService {
  
     private final FarmerRepository farmerRepository;
     private final UserRepository userRepository;
+    private final FarmService farmService;
+    private final DocumentService documentService;
  
     @Override
     @Transactional
@@ -99,6 +104,23 @@ public class FarmerServiceImpl implements FarmerService {
         // Again, no explicit save() — dirty checking handles it.
     }
  
+    @Override
+    @Transactional(readOnly = true)
+    public FarmerReviewResponse getReviewDetails(Long userId) {
+        // Composes existing service methods instead of duplicating their
+        // repository queries and DTO mapping — one source of truth per
+        // domain. The "listMy*" names read oddly here (the caller is an
+        // officer, not the farmer) but the semantics are identical:
+        // everything belonging to this farmer's userId.
+        FarmerResponse profile = getProfile(userId);
+        return new FarmerReviewResponse(
+                profile,
+                farmService.listMyLands(userId),
+                farmService.listMyCrops(userId),
+                documentService.listMyDocuments(userId)
+        );
+    }
+ 
     private FarmerResponse toResponse(Farmer farmer) {
         return new FarmerResponse(
                 farmer.getUserId(),
@@ -111,3 +133,30 @@ public class FarmerServiceImpl implements FarmerService {
     }
  
 }
+ 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

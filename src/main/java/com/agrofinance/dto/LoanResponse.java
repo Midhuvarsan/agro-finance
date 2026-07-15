@@ -14,9 +14,9 @@ public record LoanResponse(
         BigDecimal amountApproved,
         LoanStatus status,
         String purpose,
+        String officerRemarks,
         String reviewedByOfficer,
         LocalDateTime appliedAt,
         LocalDateTime lastUpdatedAt
 ) {
 }
- 

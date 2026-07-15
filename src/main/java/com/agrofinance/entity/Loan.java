@@ -68,6 +68,14 @@ public class Loan extends Auditable {
     @Column(columnDefinition = "TEXT")
     private String purpose;
  
+    /**
+     * Officer's remarks recorded at approve/reject time. New column —
+     * unlike the CANCELLED enum incident, ddl-auto: update CAN handle
+     * this (it adds columns; it just never modifies existing ones).
+     */
+    @Column(name = "officer_remarks", columnDefinition = "TEXT")
+    private String officerRemarks;
+ 
     /** Soft delete, same pattern as User — financial records are never hard-deleted. */
     @Column(name = "deleted_at")
     private LocalDateTime deletedAt;

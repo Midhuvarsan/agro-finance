@@ -18,6 +18,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
  
 import java.util.List;
@@ -84,8 +85,10 @@ public class LoanController {
  
     @PreAuthorize("hasRole('BANK_OFFICER')")
     @GetMapping("/review-queue")
-    public List<LoanResponse> reviewQueue() {
-        return loanService.reviewQueue();
+    public List<LoanResponse> reviewQueue(
+            @RequestParam(name = "status", required = false) com.agrofinance.entity.LoanStatus status
+    ) {
+        return loanService.reviewQueue(status);
     }
  
     @PreAuthorize("hasAnyRole('BANK_OFFICER', 'ADMIN')")
@@ -125,6 +128,12 @@ public class LoanController {
  
 }
  
+
+
+
+
+
+
 
 
 

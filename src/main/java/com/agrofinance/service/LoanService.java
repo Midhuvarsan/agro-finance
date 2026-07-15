@@ -20,7 +20,7 @@ public interface LoanService {
     LoanResponse cancel(Long farmerUserId, Long loanId);
  
     // ---- Officer side ----
-    List<LoanResponse> reviewQueue();
+    List<LoanResponse> reviewQueue(com.agrofinance.entity.LoanStatus status);
  
     LoanResponse getLoanForReview(Long loanId);
  
@@ -32,6 +32,12 @@ public interface LoanService {
  
 }
  
+
+
+
+
+
+
 
 
 
