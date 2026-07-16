@@ -43,6 +43,16 @@
             <artifactId>spring-boot-starter-security</artifactId>
         </dependency>
  
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-cache</artifactId>
+        </dependency>
+ 
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-redis</artifactId>
+        </dependency>
+ 
         <!-- JWT support — Spring Security has no built-in JWT library,
              since JWT is a token FORMAT (RFC 7519), not a Spring concept. -->
         <dependency>
@@ -66,7 +76,7 @@
         <dependency>
             <groupId>com.mysql</groupId>
             <artifactId>mysql-connector-j</artifactId>
-            <!-- <scope>runtime</scope> -->
+            <scope>runtime</scope>
         </dependency>
  
         <dependency>
@@ -114,3 +124,35 @@
  
 </project>
  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

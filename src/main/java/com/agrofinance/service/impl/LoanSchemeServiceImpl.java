@@ -1,11 +1,14 @@
 package com.agrofinance.service.impl;
  
+import com.agrofinance.constants.CacheNames;
 import com.agrofinance.dto.LoanSchemeRequest;
 import com.agrofinance.dto.LoanSchemeResponse;
 import com.agrofinance.entity.LoanScheme;
 import com.agrofinance.repository.LoanSchemeRepository;
 import com.agrofinance.service.LoanSchemeService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -19,8 +22,14 @@ public class LoanSchemeServiceImpl implements LoanSchemeService {
  
     private final LoanSchemeRepository loanSchemeRepository;
  
+    /**
+     * Event-based eviction: schemes change rarely and only through
+     * these two methods, so the cache is never stale. allEntries=true
+     * because listAll's single entry is the whole cache.
+     */
     @Override
     @Transactional
+    @CacheEvict(cacheNames = CacheNames.LOAN_SCHEMES, allEntries = true)
     public LoanSchemeResponse create(LoanSchemeRequest request) {
         validateAmounts(request);
         if (loanSchemeRepository.existsByName(request.name())) {
@@ -34,6 +43,7 @@ public class LoanSchemeServiceImpl implements LoanSchemeService {
  
     @Override
     @Transactional
+    @CacheEvict(cacheNames = CacheNames.LOAN_SCHEMES, allEntries = true)
     public LoanSchemeResponse update(Long schemeId, LoanSchemeRequest request) {
         validateAmounts(request);
         LoanScheme scheme = loanSchemeRepository.findById(schemeId)
@@ -45,6 +55,7 @@ public class LoanSchemeServiceImpl implements LoanSchemeService {
  
     @Override
     @Transactional(readOnly = true)
+    @Cacheable(cacheNames = CacheNames.LOAN_SCHEMES)
     public List<LoanSchemeResponse> listAll() {
         return loanSchemeRepository.findAll().stream()
                 .map(this::toResponse)
@@ -79,3 +90,36 @@ public class LoanSchemeServiceImpl implements LoanSchemeService {
     }
  
 }
+ 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

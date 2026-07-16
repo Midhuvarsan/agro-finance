@@ -83,8 +83,16 @@ public class AdminServiceImpl implements AdminService {
                 .toList();
     }
  
+    /**
+     * TTL-only caching (60s, set in CacheConfig) — no @CacheEvict
+     * anywhere for this cache, deliberately: every loan application,
+     * approval, and registration changes these numbers, so event-based
+     * eviction would fire constantly and the cache would never help.
+     * A minute of staleness on an admin dashboard is the right trade.
+     */
     @Override
     @Transactional(readOnly = true)
+    @org.springframework.cache.annotation.Cacheable(cacheNames = com.agrofinance.constants.CacheNames.DASHBOARD)
     public DashboardResponse dashboard() {
  
         Map<String, Long> loansByStatus = new HashMap<>();
@@ -121,6 +129,12 @@ public class AdminServiceImpl implements AdminService {
  
 }
  
+
+
+
+
+
+
 
 
 
