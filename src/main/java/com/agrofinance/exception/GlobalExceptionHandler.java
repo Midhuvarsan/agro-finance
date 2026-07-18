@@ -16,23 +16,55 @@ import java.util.HashMap;
 import java.util.Map;
  
 /**
- * @RestControllerAdvice = one class that intercepts exceptions from
- * EVERY controller and turns them into consistent JSON error responses,
- * instead of each controller (or Spring's default /error page — the
- * source of the confusing 403s we debugged in Phase 3) deciding
- * its own format.
+ * The single place HTTP status gets decided. Every custom exception
+ * below is pure business vocabulary with zero knowledge of HTTP —
+ * this class is the only translator.
  */
 @RestControllerAdvice
 public class GlobalExceptionHandler {
  
-    /** Our own deliberate business errors (409 duplicate email, 404 not found, etc.). */
+    // ---- Phase 12: custom exception hierarchy ----
+ 
+    @ExceptionHandler(ResourceNotFoundException.class)
+    public ResponseEntity<ErrorResponse> handleNotFound(ResourceNotFoundException ex) {
+        return build(HttpStatus.NOT_FOUND, ex.getMessage(), null);
+    }
+ 
+    @ExceptionHandler(DuplicateResourceException.class)
+    public ResponseEntity<ErrorResponse> handleDuplicate(DuplicateResourceException ex) {
+        return build(HttpStatus.CONFLICT, ex.getMessage(), null);
+    }
+ 
+    @ExceptionHandler(InvalidOperationException.class)
+    public ResponseEntity<ErrorResponse> handleInvalidOperation(InvalidOperationException ex) {
+        return build(HttpStatus.CONFLICT, ex.getMessage(), null);
+    }
+ 
+    @ExceptionHandler(BadRequestException.class)
+    public ResponseEntity<ErrorResponse> handleBadRequest(BadRequestException ex) {
+        return build(HttpStatus.BAD_REQUEST, ex.getMessage(), null);
+    }
+ 
+    @ExceptionHandler(ForbiddenOperationException.class)
+    public ResponseEntity<ErrorResponse> handleForbiddenOperation(ForbiddenOperationException ex) {
+        return build(HttpStatus.FORBIDDEN, ex.getMessage(), null);
+    }
+ 
+    @ExceptionHandler(AiServiceException.class)
+    public ResponseEntity<ErrorResponse> handleAiFailure(AiServiceException ex) {
+        return build(HttpStatus.SERVICE_UNAVAILABLE, ex.getMessage(), null);
+    }
+ 
+    // ---- Transitional: any not-yet-migrated ResponseStatusException still works ----
+ 
     @ExceptionHandler(ResponseStatusException.class)
     public ResponseEntity<ErrorResponse> handleResponseStatus(ResponseStatusException ex) {
         HttpStatus status = HttpStatus.valueOf(ex.getStatusCode().value());
         return build(status, ex.getReason(), null);
     }
  
-    /** Bean Validation failures from @Valid — collects EVERY field error, not just the first. */
+    // ---- Framework-level exceptions (unchanged since Phase 4/9) ----
+ 
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ErrorResponse> handleValidation(MethodArgumentNotValidException ex) {
         Map<String, String> fieldErrors = new HashMap<>();
@@ -41,59 +73,27 @@ public class GlobalExceptionHandler {
         return build(HttpStatus.BAD_REQUEST, "Validation failed", fieldErrors);
     }
  
-    /** @PreAuthorize rejections — authenticated but lacking the required role. */
     @ExceptionHandler(AccessDeniedException.class)
     public ResponseEntity<ErrorResponse> handleAccessDenied(AccessDeniedException ex) {
         return build(HttpStatus.FORBIDDEN, "You do not have permission to perform this action", null);
     }
  
-    /**
-     * Malformed/unparseable JSON request body. A client error, so 400 —
-     * NOT the 500 it fell through to before this handler existed
-     * (discovered via a PowerShell quoting artifact during Phase 4
-     * testing that sent literal backslashes in the JSON).
-     * Note: we don't echo Jackson's parse message — it can quote raw
-     * request content back, same information-leak concern as the
-     * catch-all handler.
-     */
-    @ExceptionHandler(HttpMessageNotReadableException.class)
-    public ResponseEntity<ErrorResponse> handleUnreadableBody(HttpMessageNotReadableException ex) {
-        return build(HttpStatus.BAD_REQUEST, "Malformed request body — expected valid JSON", null);
-    }
- 
-    /**
-     * Path variable type mismatch (e.g. /api/farmers/<9> where a Long
-     * was expected) — also a client error, also spotted in the same
-     * test session's logs falling through as an unhandled case.
-     */
-    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
-    public ResponseEntity<ErrorResponse> handleTypeMismatch(MethodArgumentTypeMismatchException ex) {
-        return build(HttpStatus.BAD_REQUEST,
-                "Invalid value for parameter '" + ex.getName() + "'", null);
-    }
- 
-    /** Multipart size limit from Spring itself (server-level), before our service-level check. */
     @ExceptionHandler(MaxUploadSizeExceededException.class)
     public ResponseEntity<ErrorResponse> handleMaxUpload(MaxUploadSizeExceededException ex) {
         return build(HttpStatus.PAYLOAD_TOO_LARGE, "File exceeds the maximum allowed size", null);
     }
  
-    /**
-     * AI provider failures — 503, the "temporarily unavailable, retry
-     * later" status. Never a 500 (not our bug) and never blocks the
-     * core lending flow (AI is advisory by design).
-     */
-    @ExceptionHandler(AiServiceException.class)
-    public ResponseEntity<ErrorResponse> handleAiFailure(AiServiceException ex) {
-        return build(HttpStatus.SERVICE_UNAVAILABLE, ex.getMessage(), null);
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<ErrorResponse> handleUnreadableBody(HttpMessageNotReadableException ex) {
+        return build(HttpStatus.BAD_REQUEST, "Malformed request body — expected valid JSON", null);
     }
  
-    /**
-     * Last-resort catch-all. Deliberately returns a GENERIC message —
-     * never ex.getMessage() — because internal exception text can leak
-     * implementation details (SQL fragments, file paths, class names)
-     * to clients. The real detail belongs in server logs, not responses.
-     */
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<ErrorResponse> handleTypeMismatch(MethodArgumentTypeMismatchException ex) {
+        return build(HttpStatus.BAD_REQUEST, "Invalid value for parameter '" + ex.getName() + "'", null);
+    }
+ 
+    /** Last resort — deliberately generic message; real detail goes to server logs, never to the client. */
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleUnexpected(Exception ex) {
         return build(HttpStatus.INTERNAL_SERVER_ERROR, "An unexpected error occurred", null);
@@ -101,17 +101,17 @@ public class GlobalExceptionHandler {
  
     private ResponseEntity<ErrorResponse> build(HttpStatus status, String message, Map<String, String> fieldErrors) {
         ErrorResponse body = new ErrorResponse(
-                LocalDateTime.now(),
-                status.value(),
-                status.getReasonPhrase(),
-                message,
-                fieldErrors
+                LocalDateTime.now(), status.value(), status.getReasonPhrase(), message, fieldErrors
         );
         return ResponseEntity.status(status).body(body);
     }
  
 }
  
+
+
+
+
 
 
 

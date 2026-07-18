@@ -3,15 +3,10 @@ package com.agrofinance.dto;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
  
 import java.math.BigDecimal;
  
-/**
- * Used for both applying (POST) and updating a still-PENDING
- * application (PUT) — same shape, so one DTO. No farmerId (JWT-derived,
- * same IDOR-proof principle as Phase 4) and no status field: a client
- * must NEVER be able to set its own loan status directly.
- */
 public record LoanApplicationRequest(
  
         @NotNull(message = "Loan scheme is required")
@@ -22,8 +17,43 @@ public record LoanApplicationRequest(
         BigDecimal amountRequested,
  
         @NotBlank(message = "Purpose is required")
+        @Size(max = 500, message = "Purpose must be under 500 characters")
         String purpose
  
 ) {
 }
  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

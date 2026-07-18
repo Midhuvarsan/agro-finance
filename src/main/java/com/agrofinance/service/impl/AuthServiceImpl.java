@@ -7,6 +7,9 @@ import com.agrofinance.entity.Role;
 import com.agrofinance.entity.User;
 import com.agrofinance.entity.UserStatus;
 import com.agrofinance.event.UserRegisteredEvent;
+import com.agrofinance.exception.BadRequestException;
+import com.agrofinance.exception.DuplicateResourceException;
+import com.agrofinance.exception.ForbiddenOperationException;
 import com.agrofinance.repository.RoleRepository;
 import com.agrofinance.repository.UserRepository;
 import com.agrofinance.security.CustomUserDetails;
@@ -21,6 +24,7 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
  
 import java.util.Set;
@@ -39,30 +43,22 @@ public class AuthServiceImpl implements AuthService {
     private final JwtService jwtService;
     private final ApplicationEventPublisher eventPublisher;
  
-    /**
-     * @Transactional was MISSING here until Phase 10 — an oversight:
-     * this method does multiple writes and should always have had it.
-     * It also matters now because @TransactionalEventListener silently
-     * drops events published outside a transaction.
-     */
     @Override
-    @org.springframework.transaction.annotation.Transactional
+    @Transactional
     public AuthResponse register(RegisterRequest request) {
  
         if (userRepository.existsByEmail(request.email())) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "Email is already registered");
+            throw new DuplicateResourceException("Email is already registered");
         }
  
         String requestedRole = request.role().toUpperCase();
  
-        // Business rule enforced HERE, not in the DTO (Step 4) — public
-        // self-registration must never be able to grant ADMIN.
         if (ADMIN_ROLE.equals(requestedRole)) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Cannot self-register as ADMIN");
+            throw new ForbiddenOperationException("Cannot self-register as ADMIN");
         }
  
         Role role = roleRepository.findByName(requestedRole)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Unknown role: " + requestedRole));
+                .orElseThrow(() -> new BadRequestException("Unknown role: " + requestedRole));
  
         User user = new User();
         user.setEmail(request.email());
@@ -73,8 +69,6 @@ public class AuthServiceImpl implements AuthService {
  
         User savedUser = userRepository.save(user);
  
-        // Event fires only after this transaction commits (AFTER_COMMIT
-        // listener) — no welcome message for a rolled-back registration.
         eventPublisher.publishEvent(new UserRegisteredEvent(savedUser.getId(), savedUser.getEmail()));
  
         CustomUserDetails userDetails = new CustomUserDetails(savedUser);
@@ -86,16 +80,16 @@ public class AuthServiceImpl implements AuthService {
     @Override
     public AuthResponse login(LoginRequest request) {
  
+        // NOTE: intentionally left as ResponseStatusException(401), not our
+        // custom hierarchy — this is an AUTHENTICATION failure, a distinct
+        // concern from business-rule exceptions (Spring Security has its
+        // own AuthenticationException family this sits alongside).
         Authentication authentication;
         try {
-            // Delegates to DaoAuthenticationProvider (Step 8), which uses
-            // our CustomUserDetailsService + PasswordEncoder internally.
             authentication = authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(request.email(), request.password())
             );
         } catch (BadCredentialsException ex) {
-            // Deliberately vague — never reveal whether the email or the
-            // password was the wrong part, to avoid user enumeration.
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid email or password");
         }
  
@@ -107,43 +101,9 @@ public class AuthServiceImpl implements AuthService {
  
     private AuthResponse buildAuthResponse(User user, String token) {
         Set<String> roleNames = user.getRoles().stream()
-                .map(Role::getName) // clean names here — "FARMER", not the ROLE_-prefixed authority string
+                .map(Role::getName)
                 .collect(Collectors.toSet());
- 
         return new AuthResponse(token, "Bearer", user.getId(), user.getEmail(), roleNames);
     }
  
 }
- 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

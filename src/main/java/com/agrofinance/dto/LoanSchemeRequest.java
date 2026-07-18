@@ -4,14 +4,17 @@ import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
+import jakarta.validation.constraints.Size;
  
 import java.math.BigDecimal;
  
 public record LoanSchemeRequest(
  
         @NotBlank(message = "Scheme name is required")
+        @Size(max = 150, message = "Scheme name must be under 150 characters")
         String name,
  
+        @Size(max = 1000, message = "Description must be under 1000 characters")
         String description,
  
         @NotNull(message = "Interest rate is required")
@@ -32,3 +35,38 @@ public record LoanSchemeRequest(
  
 ) {
 }
+ 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
