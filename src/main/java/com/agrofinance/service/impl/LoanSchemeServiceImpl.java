@@ -21,6 +21,7 @@ import java.util.List;
 public class LoanSchemeServiceImpl implements LoanSchemeService {
  
     private final LoanSchemeRepository loanSchemeRepository;
+    private final org.springframework.context.ApplicationEventPublisher eventPublisher;
  
     /**
      * Event-based eviction: schemes change rarely and only through
@@ -38,7 +39,12 @@ public class LoanSchemeServiceImpl implements LoanSchemeService {
  
         LoanScheme scheme = new LoanScheme();
         applyRequest(scheme, request);
-        return toResponse(loanSchemeRepository.save(scheme));
+        LoanScheme saved = loanSchemeRepository.save(scheme);
+ 
+        eventPublisher.publishEvent(new com.agrofinance.event.SchemeCreatedEvent(
+                saved.getName(), saved.getDescription()));
+ 
+        return toResponse(saved);
     }
  
     @Override

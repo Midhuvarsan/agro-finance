@@ -9,17 +9,37 @@ import java.util.List;
  
 public interface CropRepository extends JpaRepository<Crop, Long> {
  
-    /**
-     * JOIN FETCH cropType: CropResponse needs cropType.getName(), and
-     * without the fetch join this listing would fire one extra SELECT
-     * per crop — the classic N+1 problem, avoided the same way we fixed
-     * User.roles in Phase 3.
-     */
+    /** JOIN FETCH cropType avoids N+1 when listing (CropResponse needs cropType.getName()). */
     @Query("SELECT c FROM Crop c JOIN FETCH c.cropType WHERE c.land.farmer.userId = :farmerUserId")
     List<Crop> findAllByFarmerUserId(@Param("farmerUserId") Long farmerUserId);
  
+    /** NEW (Phase 11): derived query traversing land -> farmer -> userId for the dashboard count. */
+    long countByLandFarmerUserId(Long farmerUserId);
+ 
 }
  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

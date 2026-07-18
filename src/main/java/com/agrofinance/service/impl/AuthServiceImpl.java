@@ -6,12 +6,14 @@ import com.agrofinance.dto.RegisterRequest;
 import com.agrofinance.entity.Role;
 import com.agrofinance.entity.User;
 import com.agrofinance.entity.UserStatus;
+import com.agrofinance.event.UserRegisteredEvent;
 import com.agrofinance.repository.RoleRepository;
 import com.agrofinance.repository.UserRepository;
 import com.agrofinance.security.CustomUserDetails;
 import com.agrofinance.security.JwtService;
 import com.agrofinance.service.AuthService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
@@ -35,8 +37,16 @@ public class AuthServiceImpl implements AuthService {
     private final PasswordEncoder passwordEncoder;
     private final AuthenticationManager authenticationManager;
     private final JwtService jwtService;
+    private final ApplicationEventPublisher eventPublisher;
  
+    /**
+     * @Transactional was MISSING here until Phase 10 — an oversight:
+     * this method does multiple writes and should always have had it.
+     * It also matters now because @TransactionalEventListener silently
+     * drops events published outside a transaction.
+     */
     @Override
+    @org.springframework.transaction.annotation.Transactional
     public AuthResponse register(RegisterRequest request) {
  
         if (userRepository.existsByEmail(request.email())) {
@@ -62,6 +72,10 @@ public class AuthServiceImpl implements AuthService {
         user.setRoles(Set.of(role));
  
         User savedUser = userRepository.save(user);
+ 
+        // Event fires only after this transaction commits (AFTER_COMMIT
+        // listener) — no welcome message for a rolled-back registration.
+        eventPublisher.publishEvent(new UserRegisteredEvent(savedUser.getId(), savedUser.getEmail()));
  
         CustomUserDetails userDetails = new CustomUserDetails(savedUser);
         String token = jwtService.generateToken(userDetails);
@@ -100,3 +114,36 @@ public class AuthServiceImpl implements AuthService {
     }
  
 }
+ 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -6,17 +6,13 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
  
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
  
 public interface LoanRepository extends JpaRepository<Loan, Long> {
  
-    /**
-     * All fetch joins present because LoanResponse reads farmer name,
-     * scheme name, AND officer name — without them, mapping a list of N
-     * loans would fire up to 3N extra SELECTs (the N+1 problem, cubed).
-     * reviewedBy is LEFT joined: it's null until an officer picks it up.
-     */
     @Query("""
             SELECT l FROM Loan l
             JOIN FETCH l.farmer f
@@ -27,7 +23,6 @@ public interface LoanRepository extends JpaRepository<Loan, Long> {
             """)
     List<Loan> findAllByFarmerUserId(@Param("farmerUserId") Long farmerUserId);
  
-    /** Single loan, ownership built into the query — same pattern as LandRepository. */
     @Query("""
             SELECT l FROM Loan l
             JOIN FETCH l.farmer f
@@ -37,7 +32,6 @@ public interface LoanRepository extends JpaRepository<Loan, Long> {
             """)
     Optional<Loan> findByIdAndFarmerUserId(@Param("loanId") Long loanId, @Param("farmerUserId") Long farmerUserId);
  
-    /** Officer's review queue — every loan currently in a given status. */
     @Query("""
             SELECT l FROM Loan l
             JOIN FETCH l.farmer
@@ -48,7 +42,6 @@ public interface LoanRepository extends JpaRepository<Loan, Long> {
             """)
     List<Loan> findAllByStatus(@Param("status") LoanStatus status);
  
-    /** Officer view of any single loan (no ownership restriction — role-gated at controller). */
     @Query("""
             SELECT l FROM Loan l
             JOIN FETCH l.farmer
@@ -58,26 +51,14 @@ public interface LoanRepository extends JpaRepository<Loan, Long> {
             """)
     Optional<Loan> findByIdWithDetails(@Param("loanId") Long loanId);
  
-    /** Guard for "one active application per farmer at a time". */
     boolean existsByFarmerUserIdAndStatusIn(Long farmerUserId, List<LoanStatus> statuses);
  
-    /**
-     * GROUP BY aggregate — one query for all status counts instead of
-     * one COUNT query per status. Returns raw Object[] rows
-     * (status, count) which the service reshapes into a Map.
-     */
     @Query("SELECT l.status, COUNT(l) FROM Loan l GROUP BY l.status")
     List<Object[]> countGroupedByStatus();
  
-    /** COALESCE: SUM over zero rows is NULL in SQL — this makes it 0 instead. */
     @Query("SELECT COALESCE(SUM(l.amountApproved), 0) FROM Loan l WHERE l.status = :status")
-    java.math.BigDecimal sumApprovedAmountByStatus(@Param("status") LoanStatus status);
+    BigDecimal sumApprovedAmountByStatus(@Param("status") LoanStatus status);
  
-    /**
-     * Report query: every filter is optional via the (:param IS NULL OR ...)
-     * pattern — one query serves all filter combinations instead of a
-     * combinatorial explosion of repository methods.
-     */
     @Query("""
             SELECT l FROM Loan l
             JOIN FETCH l.farmer
@@ -89,11 +70,44 @@ public interface LoanRepository extends JpaRepository<Loan, Long> {
             ORDER BY l.createdAt DESC
             """)
     List<Loan> findForReport(@Param("status") LoanStatus status,
-                             @Param("from") java.time.LocalDateTime from,
-                             @Param("to") java.time.LocalDateTime to);
+                             @Param("from") LocalDateTime from,
+                             @Param("to") LocalDateTime to);
+ 
+    @Query("""
+            SELECT l FROM Loan l
+            JOIN FETCH l.farmer
+            WHERE l.status IN :statuses AND l.createdAt < :cutoff
+            """)
+    List<Loan> findStaleInReview(@Param("statuses") List<LoanStatus> statuses,
+                                 @Param("cutoff") LocalDateTime cutoff);
+ 
+    // ---- NEW (Phase 11): dashboard aggregates ----
+ 
+    /** Per-farmer status breakdown — same GROUP BY shape as the admin dashboard, scoped to one farmer. */
+    @Query("SELECT l.status, COUNT(l) FROM Loan l WHERE l.farmer.userId = :farmerUserId GROUP BY l.status")
+    List<Object[]> countGroupedByStatusForFarmer(@Param("farmerUserId") Long farmerUserId);
+ 
+    long countByFarmerUserId(Long farmerUserId);
+ 
+    /** Per-officer status breakdown — only loans THIS officer has personally decided. */
+    @Query("SELECT l.status, COUNT(l) FROM Loan l WHERE l.reviewedBy.userId = :officerUserId GROUP BY l.status")
+    List<Object[]> countGroupedByStatusForOfficer(@Param("officerUserId") Long officerUserId);
+ 
+    long countByStatus(LoanStatus status);
+ 
+    @Query("SELECT COALESCE(SUM(l.amountApproved), 0) FROM Loan l WHERE l.reviewedBy.userId = :officerUserId")
+    BigDecimal sumApprovedAmountByOfficer(@Param("officerUserId") Long officerUserId);
  
 }
  
+
+
+
+
+
+
+
+
 
 
 

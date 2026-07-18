@@ -1,9 +1,11 @@
 package com.agrofinance.controller;
  
+import com.agrofinance.dto.FarmerDashboardResponse;
 import com.agrofinance.dto.FarmerRequest;
 import com.agrofinance.dto.FarmerResponse;
 import com.agrofinance.dto.FarmerReviewResponse;
 import com.agrofinance.security.CustomUserDetails;
+import com.agrofinance.service.DashboardService;
 import com.agrofinance.service.FarmerService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -20,21 +22,13 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
  
-/**
- * All /me endpoints derive the target farmer from the JWT principal —
- * IDOR is impossible by construction because the client never supplies
- * an id for their own profile operations.
- *
- * The one id-taking endpoint (GET /{userId}) is deliberately gated to
- * BANK_OFFICER/ADMIN — a separate, role-based capability for loan
- * review, not a loosening of the ownership rule.
- */
 @RestController
 @RequestMapping("/api/farmers")
 @RequiredArgsConstructor
 public class FarmerController {
  
     private final FarmerService farmerService;
+    private final DashboardService dashboardService;
  
     @PreAuthorize("hasRole('FARMER')")
     @PostMapping("/me")
@@ -68,14 +62,19 @@ public class FarmerController {
         return ResponseEntity.noContent().build();
     }
  
-    /** Officers/admins reviewing loans may look up any farmer by id. */
+    /** NEW (Phase 11): statistics-only dashboard for the logged-in farmer. */
+    @PreAuthorize("hasRole('FARMER')")
+    @GetMapping("/me/dashboard")
+    public FarmerDashboardResponse getMyDashboard(@AuthenticationPrincipal CustomUserDetails principal) {
+        return dashboardService.farmerDashboard(principal.getUser().getId());
+    }
+ 
     @PreAuthorize("hasAnyRole('BANK_OFFICER', 'ADMIN')")
     @GetMapping("/{userId}")
     public FarmerResponse getFarmerById(@PathVariable Long userId) {
         return farmerService.getProfile(userId);
     }
  
-    /** Full credit-review picture: profile + lands + crops + documents in one call. */
     @PreAuthorize("hasAnyRole('BANK_OFFICER', 'ADMIN')")
     @GetMapping("/{userId}/review")
     public FarmerReviewResponse getFarmerReviewDetails(@PathVariable Long userId) {
@@ -84,6 +83,14 @@ public class FarmerController {
  
 }
  
+
+
+
+
+
+
+
+
 
 
 

@@ -56,6 +56,7 @@ public class LoanServiceImpl implements LoanService {
     private final LoanSchemeRepository loanSchemeRepository;
     private final FarmerRepository farmerRepository;
     private final BankOfficerRepository bankOfficerRepository;
+    private final org.springframework.context.ApplicationEventPublisher eventPublisher;
  
     // ------------------------------------------------------------------
     // Farmer side
@@ -187,6 +188,11 @@ public class LoanServiceImpl implements LoanService {
         loan.setAmountApproved(decision.amountApproved());
         loan.setOfficerRemarks(decision.remarks());
         loan.setReviewedBy(officerRef(officerUserId));
+ 
+        eventPublisher.publishEvent(new com.agrofinance.event.LoanDecidedEvent(
+                loan.getId(), loan.getFarmer().getUserId(), true,
+                decision.amountApproved(), decision.remarks(), loan.getLoanScheme().getName()));
+ 
         return toResponse(loan);
     }
  
@@ -207,6 +213,11 @@ public class LoanServiceImpl implements LoanService {
         loan.setStatus(LoanStatus.REJECTED);
         loan.setOfficerRemarks(decision.remarks());
         loan.setReviewedBy(officerRef(officerUserId));
+ 
+        eventPublisher.publishEvent(new com.agrofinance.event.LoanDecidedEvent(
+                loan.getId(), loan.getFarmer().getUserId(), false,
+                null, decision.remarks(), loan.getLoanScheme().getName()));
+ 
         return toResponse(loan);
     }
  
@@ -305,6 +316,8 @@ public class LoanServiceImpl implements LoanService {
  
 }
  
+
+
 
 
 
