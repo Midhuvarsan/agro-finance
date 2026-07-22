@@ -1,0 +1,119 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+ 
+    <!-- Import Spring Boot's default color/console conventions -->
+    <include resource="org/springframework/boot/logging/logback/defaults.xml"/>
+ 
+    <property name="LOG_DIR" value="logs"/>
+    <property name="APP_NAME" value="agrofinance"/>
+ 
+    <!--
+      Pattern includes [%X{requestId}] — the MDC value our RequestLoggingFilter
+      sets. Every log line on a request's thread carries the same id, making a
+      whole request traceable across controller, service, and error logs.
+    -->
+    <property name="CONSOLE_PATTERN"
+              value="%clr(%d{HH:mm:ss.SSS}){faint} %clr(%5p) %clr([%X{requestId:-startup}]){magenta} %clr(%-40.40logger{39}){cyan} %clr(:){faint} %m%n%wEx"/>
+    <property name="FILE_PATTERN"
+              value="%d{yyyy-MM-dd HH:mm:ss.SSS} %5p [%X{requestId:-startup}] %-40.40logger{39} : %m%n%wEx"/>
+ 
+    <!-- ================= CONSOLE ================= -->
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>${CONSOLE_PATTERN}</pattern>
+        </encoder>
+    </appender>
+ 
+    <!-- ================= ROLLING FILE (all logs) ================= -->
+    <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${LOG_DIR}/${APP_NAME}.log</file>
+        <encoder>
+            <pattern>${FILE_PATTERN}</pattern>
+        </encoder>
+        <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+            <!-- One file per day, and roll if a day's file exceeds 10MB -->
+            <fileNamePattern>${LOG_DIR}/${APP_NAME}.%d{yyyy-MM-dd}.%i.log</fileNamePattern>
+            <maxFileSize>10MB</maxFileSize>
+            <maxHistory>30</maxHistory>       <!-- keep 30 days -->
+            <totalSizeCap>500MB</totalSizeCap> <!-- hard cap on disk usage -->
+        </rollingPolicy>
+    </appender>
+ 
+    <!-- ================= ERROR-ONLY ROLLING FILE ================= -->
+    <!-- Separate file for ERROR level, so ops can watch failures without noise. -->
+    <appender name="ERROR_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${LOG_DIR}/${APP_NAME}-error.log</file>
+        <filter class="ch.qos.logback.classic.filter.LevelFilter">
+            <level>ERROR</level>
+            <onMatch>ACCEPT</onMatch>
+            <onMismatch>DENY</onMismatch>
+        </filter>
+        <encoder>
+            <pattern>${FILE_PATTERN}</pattern>
+        </encoder>
+        <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+            <fileNamePattern>${LOG_DIR}/${APP_NAME}-error.%d{yyyy-MM-dd}.%i.log</fileNamePattern>
+            <maxFileSize>10MB</maxFileSize>
+            <maxHistory>60</maxHistory>
+            <totalSizeCap>200MB</totalSizeCap>
+        </rollingPolicy>
+    </appender>
+ 
+    <!-- ================= PER-PROFILE LEVELS ================= -->
+    <!-- dev: verbose. prod: quiet, no SQL, no framework DEBUG. -->
+    <springProfile name="dev,default">
+        <logger name="com.agrofinance" level="DEBUG"/>
+        <logger name="org.hibernate.SQL" level="DEBUG"/>
+        <root level="INFO">
+            <appender-ref ref="CONSOLE"/>
+            <appender-ref ref="FILE"/>
+            <appender-ref ref="ERROR_FILE"/>
+        </root>
+    </springProfile>
+ 
+    <springProfile name="prod">
+        <logger name="com.agrofinance" level="INFO"/>
+        <logger name="org.hibernate.SQL" level="WARN"/>
+        <root level="WARN">
+            <appender-ref ref="CONSOLE"/>
+            <appender-ref ref="FILE"/>
+            <appender-ref ref="ERROR_FILE"/>
+        </root>
+    </springProfile>
+ 
+</configuration>
+ 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

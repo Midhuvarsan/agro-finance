@@ -1,0 +1,29 @@
+# Activated only when tests run with @ActiveProfiles("test").
+# Points at an in-memory H2 DB instead of your real MySQL — tests never
+# touch production/dev data, and no MySQL server needs to be running.
+spring:
+  datasource:
+    url: jdbc:h2:mem:agrofinance_test;MODE=MySQL;DB_CLOSE_DELAY=-1
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+  jpa:
+    hibernate:
+      ddl-auto: create-drop # fresh schema per test run, from our entities
+    show-sql: false
+    # CRITICAL: without this, Spring runs data.sql BEFORE Hibernate creates
+    # tables (the role table wouldn't exist yet) -> data.sql fails silently
+    # or is skipped, and every registration test fails with "Unknown role".
+    defer-datasource-initialization: true
+
+  data:
+    redis:
+      host: localhost
+      port: 6379 # if Redis isn't running during tests, disable caching below instead
+
+  cache:
+    type: none # simplest: skip Redis entirely in tests, avoid a hard dependency on it being up
+
+
+# jwt.secret already has a fallback default in the main application.yml — reused here.
+

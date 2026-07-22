@@ -11,7 +11,7 @@ public final class CacheNames {
     public static final String LOAN_SCHEMES = "loanSchemes";
     public static final String DASHBOARD = "dashboard";
     public static final String WEATHER = "weather";
- 
+
     private CacheNames() {
     }
  
